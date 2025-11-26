@@ -18,12 +18,16 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 # --- Configuration DB ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("Il faut définir la variable d'environnement DATABASE_URL (ex: postgres://...)")
+    # Use SQLite for local development
+    DATABASE_URL = "sqlite:///./secret_santa.db"
+    print("DEBUG: Using SQLite for local development")
+else:
+    print(f"DEBUG: Using production database: {DATABASE_URL[:50]}...")
 
-# Convert psycopg2 URL to psycopg URL if needed
+# Convert psycopg2 URL to psycopg URL if needed (only for PostgreSQL)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-elif DATABASE_URL.startswith("postgresql://"):
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 # SQLAlchemy setup
@@ -59,8 +63,13 @@ def ensure_db_init():
     """S'assure que la base de données est initialisée"""
     global _db_initialized
     if not _db_initialized:
-        Base.metadata.create_all(engine)
-        _db_initialized = True
+        try:
+            Base.metadata.create_all(engine)
+            _db_initialized = True
+            print("DEBUG: Database initialized successfully")
+        except Exception as e:
+            print(f"DEBUG: Database initialization failed: {e}")
+            raise
 
 def init_db():
     """Initialise les tables de la base de données"""
@@ -77,14 +86,19 @@ def db_get_config(key: str):
 
 def db_set_config(key: str, value):
     ensure_db_init()
-    with SessionLocal() as db:
-        row = db.query(Config).filter_by(key=key).one_or_none()
-        if row is None:
-            row = Config(key=key, value=value)
-            db.add(row)
-        else:
-            row.value = value
-        db.commit()
+    try:
+        with SessionLocal() as db:
+            row = db.query(Config).filter_by(key=key).one_or_none()
+            if row is None:
+                row = Config(key=key, value=value)
+                db.add(row)
+            else:
+                row.value = value
+            db.commit()
+            print(f"DEBUG: Successfully saved config {key} = {value}")
+    except Exception as e:
+        print(f"DEBUG: Failed to save config {key}: {e}")
+        raise
 
 def db_clear_participants():
     ensure_db_init()
@@ -96,18 +110,18 @@ def db_get_all_participants() -> Dict[str, Dict]:
     ensure_db_init()
     with SessionLocal() as db:
         rows = db.query(Participant).all()
-        return {r.name: {"password": r.password, "receiver": r.receiver} for r in rows}
+        return {r.name: {"password": r.password, "target": r.receiver} for r in rows}
 
 def db_save_participants(participants: Dict[str, Dict[str, str]]):
     """
-    participants : {name: {"password": pw, "receiver": receiver}}
+    participants : {name: {"password": pw, "target": target}}
     On écrase la table participants.
     """
     ensure_db_init()
     with SessionLocal() as db:
         db.query(Participant).delete()
         for name, info in participants.items():
-            p = Participant(name=name, password=info["password"], receiver=info["receiver"])
+            p = Participant(name=name, password=info["password"], receiver=info["target"])
             db.add(p)
         db.commit()
 
@@ -116,15 +130,19 @@ def db_save_participants(participants: Dict[str, Dict[str, str]]):
 # -------------------------
 def gen_password_christmas(existing_set: Optional[set] = None) -> str:
     adjectifs = [
-        "joyeux", "givré", "rouge", "vert", "doré", "argenté", "brillant",
-        "festif", "magique", "hivernal", "sucré", "gourmand", "glacé",
-        "étincelant", "neigeux", "mystique"
+        "joyeux", "blanc", "rouge", "vert", "dore", "argente", "brillant",
+        "festif", "magique", "hivernal", "sucre", "gourmand", "glace",
+        "etincelant", "lumineux",
+        "merveilleux", "etonnant", "petillant", "enchante", "radieux",
+         "epique", "fantastique"
     ]
 
     noms = [
-        "sapin", "renne", "lutin", "neige", "cadeau", "etoile",
-        "buche", "houx", "traineau", "cloche", "chaussette",
-        "pain_d_epice", "boule", "guirlande", "bonnet"
+    "sapin", "renne", "lutin", "traineau", "bonnet", "cadeau",
+    "houx", "flocon", "pain_depice",
+    "ours", "elfe", "jouet", "carillon",
+    "bonhomme",
+    "ruban", "pere_noel", "rudolf"
     ]
 
     if existing_set is None:
@@ -165,7 +183,18 @@ def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries:
 # -------------------------
 @app.route("/")
 def home():
-    return redirect(url_for("admin_start"))
+    return redirect(url_for("participant_login"))
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password == "super_santa_2025":
+            return redirect(url_for("admin_start"))
+        else:
+            flash("Mot de passe incorrect.", "danger")
+    
+    return render_template("admin_login.html")
 
 @app.route("/admin/start", methods=["GET", "POST"])
 def admin_start():
@@ -182,7 +211,9 @@ def admin_start():
             flash("Il faut au moins 2 participants.", "danger")
             return render_template("admin_start.html", names_raw=raw)
         # sauvegarde noms et réinitialise compat & participants
+        print(f"DEBUG: Saving names: {names}")  # Debug line
         db_set_config("names", names)
+        print("DEBUG: Names saved successfully")  # Debug line
         # reset de compat et participants
         db_set_config("compat", [])
         db_clear_participants()
@@ -197,7 +228,9 @@ def admin_start():
 @app.route("/admin/matrix", methods=["GET", "POST"])
 def admin_matrix():
     names = db_get_config("names") or []
+    print(f"DEBUG: Retrieved names: {names}")  # Debug line
     if not names:
+        print("DEBUG: No names found, redirecting to admin_start")  # Debug line
         return redirect(url_for("admin_start"))
     n = len(names)
 
@@ -245,7 +278,7 @@ def admin_generate():
     for name in names:
         pw = gen_password_christmas(existing)
         existing.add(pw)
-        participants[name] = {"receiver": assignment[name], "password": pw}
+        participants[name] = {"target": assignment[name], "password": pw}
 
     # sauvegarde en base (écrase la table participants)
     db_save_participants(participants)
@@ -272,8 +305,8 @@ def participant_login():
 
         real = participants[name]["password"]
         if pwd.strip() == real:
-            receiver = participants[name]["receiver"]
-            return render_template("participant_result.html", name=name, receiver=receiver)
+            password = participants[name]["password"]
+            return render_template("participant_result.html", name=name, password=password)
         else:
             flash("Mot de passe incorrect.", "danger")
             return render_template("participant_login.html", names=names)

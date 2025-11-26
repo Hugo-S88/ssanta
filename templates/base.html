@@ -5,13 +5,91 @@
     <title>Secret Santa</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body {
+        background: linear-gradient(135deg, #0f4c3a 0%, #8b0000 50%, #0f4c3a 100%);
+        min-height: 100vh;
+        color: #fff;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+        color: #2d5016;
+        box-shadow: 0 8px 32px rgba(139, 0, 0, 0.3);
+      }
+      .navbar {
+        background: linear-gradient(90deg, #8b0000, #228b22) !important;
+        padding: 1rem 0;
+      }
+      .navbar-brand, .nav-link {
+        color: #fff !important;
+        font-weight: bold;
+        font-size: 1.2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      }
+      .navbar-brand {
+        font-size: 1.8rem;
+        text-transform: uppercase;
+        color: #8b0000 !important;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        font-weight: 900;
+      }
+      .navbar-brand:hover, .nav-link:hover {
+        color: #ffd700 !important;
+      }
+      .btn-primary {
+        background: linear-gradient(45deg, #8b0000, #dc143c);
+        border: none;
+        border-radius: 10px;
+      }
+      .btn-success {
+        background: linear-gradient(45deg, #228b22, #32cd32);
+        border: none;
+        border-radius: 10px;
+      }
+      .btn-secondary {
+        background: linear-gradient(45deg, #0f4c3a, #2e8b57);
+        border: none;
+        border-radius: 10px;
+      }
+      h1 {
+        color: #8b0000;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      }
+      .alert-success {
+        background: linear-gradient(45deg, #d4edda, #c3e6cb);
+        border: 2px solid #228b22;
+        color: #0f4c3a;
+      }
+      .alert-danger {
+        background: linear-gradient(45deg, #f8d7da, #f5c6cb);
+        border: 2px solid #8b0000;
+        color: #721c24;
+      }
+      .table th {
+        background: linear-gradient(90deg, #8b0000, #dc143c);
+        color: #fff;
+        border: none;
+      }
+      .form-control, .form-select {
+        border: 2px solid #228b22;
+        border-radius: 8px;
+      }
+      .form-control:focus, .form-select:focus {
+        border-color: #8b0000;
+        box-shadow: 0 0 0 0.2rem rgba(139, 0, 0, 0.25);
+      }
+    </style>
   </head>
-  <body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
       <div class="container">
-        <a class="navbar-brand" href="{{ url_for('admin_start') }}">Secret Santa</a>
+        <a class="navbar-brand" href="{{ url_for('participant_login') }}">🎄 Secret Santa 🎁</a>
         <div class="navbar-nav">
-          <a class="nav-link" href="{{ url_for('admin_start') }}">Admin</a>
+          <a class="nav-link" href="{{ url_for('admin_login') }}">Admin</a>
           <a class="nav-link" href="{{ url_for('participant_login') }}">Participant</a>
         </div>
       </div>
@@ -28,8 +106,8 @@
       {% endwith %}
 
       {% block content %}{% endblock %}
-      <hr/>
-      <p class="text-muted small">Application simple Secret Santa — textes en français.</p>
+      <hr style="border-color: #228b22; border-width: 2px;"/>
+      <p class="text-muted small" style="color: #0f4c3a !important;">🎄 Application Secret Santa — Joyeux Noël ! 🎁</p>
     </div>
   </body>
 </html>

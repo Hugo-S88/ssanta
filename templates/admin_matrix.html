@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>🎅 Administration — matrice de compatibilité 🎁</h1>
+  <p>🎄 Choisissez pour chaque ligne (offrant) à qui il peut offrir (colonne). Décochez l'entrée si l'offre est interdite. 🎄</p>
+
+  <form method="post">
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr>
+          <th>Donneur → / Receveur ↓</th>
+          {% for name in names %}
+            <th>{{ name }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in range(names|length) %}
+          {% set name = names[i] %}
+          <tr>
+            <th>{{ name }}</th>
+            {% for j in range(names|length) %}
+              <td class="text-center">
+                <input type="checkbox" name="c_{{i}}_{{j}}" {% if compat[i][j] == 1 %}checked{% endif %}>
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="mb-3">
+      <button class="btn btn-success" type="submit">🎄 Générer l'affectation</button>
+      <a class="btn btn-secondary" href="{{ url_for('admin_start') }}">Retour</a>
+    </div>
+  </form>
+{% endblock %}

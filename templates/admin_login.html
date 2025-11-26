@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>🎅 Administration — Connexion 🎁</h1>
+  <p>🎄 Entrez le mot de passe administrateur pour accéder aux fonctions d'administration. 🎄</p>
+
+  <form method="post">
+    <div class="mb-3">
+      <label class="form-label">🔐 Mot de passe administrateur</label>
+      <input type="password" name="password" class="form-control" placeholder="Entrez le mot de passe" required>
+    </div>
+    <button class="btn btn-primary" type="submit">🎄 Se connecter</button>
+  </form>
+{% endblock %}

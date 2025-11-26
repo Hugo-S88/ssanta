@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Résultat</h1>
-  <p><strong>{{ name }}</strong>, vous devez offrir un cadeau à :</p>
-  <div class="alert alert-success">
-    <h3 class="mb-0">{{ receiver }}</h3>
+  <h1>🎅 Votre mot de passe Secret Santa 🎁</h1>
+  <p>🎄 <strong>{{ name }}</strong>, voici votre mot de passe : 🎄</p>
+  <div class="alert alert-success" style="text-align: center; font-size: 1.5rem;">
+    <h3 class="mb-0">🔑 <code>{{ password }}</code> 🔑</h3>
   </div>
-  <p>Bonne préparation !</p>
+  <p style="text-align: center;">🎁 Gardez ce mot de passe secret et utilisez-le pour vous connecter ! 🎁</p>
 {% endblock %}

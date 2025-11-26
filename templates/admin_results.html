@@ -1,21 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1>Résultats — affectations générées</h1>
-  <p>Téléchargez le fichier JSON pour conserver les mots de passe (ou copiez-collez).</p>
+  <h1>🎅 Résultats — affectations générées 🎁</h1>
+  <p>🎄 Téléchargez le fichier JSON pour conserver les mots de passe (ou copiez-collez). 🎄</p>
 
   <table class="table table-striped">
-    <thead><tr><th>Participant</th><th>Doit offrir à</th><th>Mot de passe</th></tr></thead>
+    <thead><tr><th>Participant</th><th>Mot de passe</th></tr></thead>
     <tbody>
       {% for name, info in participants.items() %}
         <tr>
           <td>{{ name }}</td>
-          <td>{{ info.receiver }}</td>
           <td><code>{{ info.password }}</code></td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <a class="btn btn-primary" href="{{ url_for('admin_export') }}">Télécharger (JSON)</a>
+  <a class="btn btn-primary" href="{{ url_for('admin_export') }}">🎁 Télécharger (JSON)</a>
   <a class="btn btn-secondary" href="{{ url_for('admin_start') }}">Nouvelle liste</a>
 {% endblock %}
