@@ -157,20 +157,114 @@ def gen_password_christmas(existing_set: Optional[set] = None) -> str:
     return f"{random.choice(adjectifs)}_{random.choice(noms)}_{random.randint(10,99)}"
 
 # -------------------------
-# Algorithme d'affectation (essai par permutations)
+# Algorithme d'affectation intelligent (backtracking avec heuristiques)
 # -------------------------
 def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries: int = 100000) -> Optional[Dict[str,str]]:
     n = len(names)
     if n == 0:
         return {}
+    
+    # Vérification préalable : chaque personne doit pouvoir donner à au moins une personne
+    for i in range(n):
+        if sum(compat_matrix[i]) == 0:
+            return None
+    
+    def count_available_receivers(giver_idx: int, used_receivers: set) -> int:
+        """Compte combien de receveurs disponibles restent pour ce donneur"""
+        count = 0
+        for j in range(n):
+            if j not in used_receivers and compat_matrix[giver_idx][j] == 1:
+                count += 1
+        return count
+    
+    def backtrack(assignment: List[int], used_receivers: set, giver_idx: int) -> bool:
+        """Algorithme de backtracking avec heuristique Most Constrained Variable"""
+        if giver_idx == n:
+            return True  # Solution trouvée
+        
+        # Heuristique : trier les receveurs possibles par contrainte (moins d'options d'abord)
+        possible_receivers = []
+        for j in range(n):
+            if j not in used_receivers and compat_matrix[giver_idx][j] == 1:
+                # Calculer combien de donneurs restants peuvent donner à ce receveur
+                future_constraints = 0
+                for future_giver in range(giver_idx + 1, n):
+                    if compat_matrix[future_giver][j] == 1:
+                        future_constraints += 1
+                possible_receivers.append((j, future_constraints))
+        
+        # Trier par nombre de contraintes futures (moins de contraintes = plus prioritaire)
+        possible_receivers.sort(key=lambda x: x[1])
+        
+        for receiver_idx, _ in possible_receivers:
+            # Vérifier si cette assignation ne bloque pas d'autres donneurs
+            can_assign = True
+            temp_used = used_receivers | {receiver_idx}
+            
+            # Look-ahead : vérifier que tous les donneurs restants ont au moins une option
+            for future_giver in range(giver_idx + 1, n):
+                if count_available_receivers(future_giver, temp_used) == 0:
+                    can_assign = False
+                    break
+            
+            if can_assign:
+                assignment[giver_idx] = receiver_idx
+                used_receivers.add(receiver_idx)
+                
+                if backtrack(assignment, used_receivers, giver_idx + 1):
+                    return True
+                
+                # Backtrack
+                used_receivers.remove(receiver_idx)
+                assignment[giver_idx] = -1
+        
+        return False
+    
+    # Essayer avec différents ordres de donneurs si le premier échoue
+    givers_order = list(range(n))
+    
+    # Heuristique : commencer par les donneurs les plus contraints
+    giver_constraints = []
+    for i in range(n):
+        constraint_count = sum(compat_matrix[i])
+        giver_constraints.append((i, constraint_count))
+    
+    giver_constraints.sort(key=lambda x: x[1])  # Plus contraints d'abord
+    givers_order = [x[0] for x in giver_constraints]
+    
+    for attempt in range(min(10, max_tries // 1000 + 1)):
+        if attempt > 0:
+            # Mélanger légèrement l'ordre après le premier essai
+            random.shuffle(givers_order)
+        
+        # Réorganiser la matrice selon l'ordre des donneurs
+        reordered_matrix = [[compat_matrix[givers_order[i]][j] for j in range(n)] for i in range(n)]
+        
+        assignment = [-1] * n
+        used_receivers = set()
+        
+        if backtrack(assignment, used_receivers, 0):
+            # Reconvertir l'assignation vers les noms originaux
+            result = {}
+            for i in range(n):
+                giver_original_idx = givers_order[i]
+                receiver_idx = assignment[i]
+                result[names[giver_original_idx]] = names[receiver_idx]
+            return result
+    
+    # Fallback vers l'ancien algorithme si le nouveau échoue
+    return find_assignment_fallback(names, compat_matrix, max_tries)
 
+
+def find_assignment_fallback(names: List[str], compat_matrix: List[List[int]], max_tries: int) -> Optional[Dict[str,str]]:
+    """Algorithme de fallback (ancienne méthode aléatoire)"""
+    n = len(names)
     idx = list(range(n))
     for _ in range(max_tries):
         perm = idx[:]
         random.shuffle(perm)
         ok = True
         for i, j in enumerate(perm):
-            # compat_matrix must be indexed same order as names
             if compat_matrix[i][j] != 1:
                 ok = False
                 break
