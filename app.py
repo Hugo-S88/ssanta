@@ -150,12 +150,11 @@ def gen_password_christmas(existing_set: Optional[set] = None) -> str:
 
     # essaie d'éviter collisions en ajoutant un petit suffixe numérique si nécessaire
     for _ in range(100):
-        candidate = f"{random.choice(adjectifs)}_{random.choice(noms)}"
+        candidate = f"{random.choice(noms)}_{random.choice(adjectifs)}"
         if candidate not in existing_set:
             return candidate
     # fallback : ajoute un numéro aléatoire
-    return f"{random.choice(adjectifs)}_{random.choice(noms)}_{random.randint(10,99)}"
-
+    return f"{random.choice(noms)}_{random.choice(adjectifs)}_{random.randint(10,99)}"
 # -------------------------
 # Algorithme d'affectation intelligent (backtracking avec heuristiques)
 # -------------------------
