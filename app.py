@@ -159,7 +159,7 @@ def gen_password_christmas(existing_set: Optional[set] = None) -> str:
 # -------------------------
 # Algorithme d'affectation (essai par permutations)
 # -------------------------
-def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries: int = 20000) -> Optional[Dict[str,str]]:
+def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries: int = 100000) -> Optional[Dict[str,str]]:
     n = len(names)
     if n == 0:
         return {}
@@ -267,7 +267,7 @@ def admin_generate():
         flash("Données manquantes. Recommencez.", "danger")
         return redirect(url_for("admin_start"))
 
-    assignment = find_assignment(names, compat, max_tries=20000)
+    assignment = find_assignment(names, compat, max_tries=100000)
     if assignment is None:
         flash("Impossible de trouver une affectation respectant la matrice. Modifiez la matrice et réessayez.", "danger")
         return redirect(url_for("admin_matrix"))
