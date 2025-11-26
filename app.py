@@ -305,8 +305,8 @@ def participant_login():
 
         real = participants[name]["password"]
         if pwd.strip() == real:
-            password = participants[name]["password"]
-            return render_template("participant_result.html", name=name, password=password)
+            target = participants[name]["target"]
+            return render_template("participant_result.html", name=name, target=target)
         else:
             flash("Mot de passe incorrect.", "danger")
             return render_template("participant_login.html", names=names)
