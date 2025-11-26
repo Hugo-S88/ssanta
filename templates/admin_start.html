@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Administration — liste des participants</h1>
+  <p>Entrez un participant par ligne (ou séparés par des virgules). Les doublons seront ignorés.</p>
+
+  <form method="post">
+    <div class="mb-3">
+      <label for="names" class="form-label">Participants</label>
+      <textarea class="form-control" id="names" name="names" rows="6" placeholder="Ex: Alice\nBob\nCharlie">{{ names_raw | default('') }}</textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Étape suivante : définir la matrice</button>
+  </form>
+{% endblock %}

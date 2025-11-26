@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Participant — connexion</h1>
+  <p>Sélectionnez votre nom et entrez votre mot de passe pour voir la personne à qui offrir.</p>
+
+  <form method="post">
+    <div class="mb-3">
+      <label class="form-label">Nom</label>
+      <select name="name" class="form-select">
+        {% for n in names %}
+          <option value="{{ n }}">{{ n }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Mot de passe</label>
+      <input type="text" name="password" class="form-control" placeholder="Mot de passe reçu de l'administrateur">
+    </div>
+
+    <button class="btn btn-primary" type="submit">Voir qui je dois gâter</button>
+  </form>
+{% endblock %}

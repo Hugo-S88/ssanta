@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Résultat</h1>
+  <p><strong>{{ name }}</strong>, vous devez offrir un cadeau à :</p>
+  <div class="alert alert-success">
+    <h3 class="mb-0">{{ receiver }}</h3>
+  </div>
+  <p>Bonne préparation !</p>
+{% endblock %}
