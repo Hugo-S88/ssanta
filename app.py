@@ -168,49 +168,40 @@ def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries:
         if sum(compat_matrix[i]) == 0:
             return None
     
-    def count_available_receivers(giver_idx: int, used_receivers: set) -> int:
-        """Compte combien de receveurs disponibles restent pour ce donneur"""
-        count = 0
-        for j in range(n):
-            if j not in used_receivers and compat_matrix[giver_idx][j] == 1:
-                count += 1
-        return count
-    
-    def backtrack(assignment: List[int], used_receivers: set, giver_idx: int) -> bool:
-        """Algorithme de backtracking avec heuristique Most Constrained Variable"""
+    def backtrack(assignment: List[int], used_receivers: set, giver_idx: int, matrix: List[List[int]]) -> bool:
+        """Algorithme de backtracking avec vérification stricte des compatibilités"""
         if giver_idx == n:
             return True  # Solution trouvée
         
-        # Heuristique : trier les receveurs possibles par contrainte (moins d'options d'abord)
+        # Obtenir tous les receveurs compatibles non utilisés
         possible_receivers = []
         for j in range(n):
-            if j not in used_receivers and compat_matrix[giver_idx][j] == 1:
-                # Calculer combien de donneurs restants peuvent donner à ce receveur
-                future_constraints = 0
-                for future_giver in range(giver_idx + 1, n):
-                    if compat_matrix[future_giver][j] == 1:
-                        future_constraints += 1
-                possible_receivers.append((j, future_constraints))
+            if j not in used_receivers and matrix[giver_idx][j] == 1:
+                possible_receivers.append(j)
         
-        # Trier par nombre de contraintes futures (moins de contraintes = plus prioritaire)
-        possible_receivers.sort(key=lambda x: x[1])
+        # Mélanger pour éviter les biais
+        random.shuffle(possible_receivers)
         
-        for receiver_idx, _ in possible_receivers:
-            # Vérifier si cette assignation ne bloque pas d'autres donneurs
-            can_assign = True
+        for receiver_idx in possible_receivers:
+            # Vérifier look-ahead : s'assurer que les donneurs restants ont des options
             temp_used = used_receivers | {receiver_idx}
+            valid = True
             
-            # Look-ahead : vérifier que tous les donneurs restants ont au moins une option
             for future_giver in range(giver_idx + 1, n):
-                if count_available_receivers(future_giver, temp_used) == 0:
-                    can_assign = False
+                has_option = False
+                for future_receiver in range(n):
+                    if future_receiver not in temp_used and matrix[future_giver][future_receiver] == 1:
+                        has_option = True
+                        break
+                if not has_option:
+                    valid = False
                     break
             
-            if can_assign:
+            if valid:
                 assignment[giver_idx] = receiver_idx
                 used_receivers.add(receiver_idx)
                 
-                if backtrack(assignment, used_receivers, giver_idx + 1):
+                if backtrack(assignment, used_receivers, giver_idx + 1, matrix):
                     return True
                 
                 # Backtrack
@@ -219,37 +210,49 @@ def find_assignment(names: List[str], compat_matrix: List[List[int]], max_tries:
         
         return False
     
-    # Essayer avec différents ordres de donneurs si le premier échoue
-    givers_order = list(range(n))
-    
-    # Heuristique : commencer par les donneurs les plus contraints
-    giver_constraints = []
-    for i in range(n):
-        constraint_count = sum(compat_matrix[i])
-        giver_constraints.append((i, constraint_count))
-    
-    giver_constraints.sort(key=lambda x: x[1])  # Plus contraints d'abord
-    givers_order = [x[0] for x in giver_constraints]
-    
-    for attempt in range(min(10, max_tries // 1000 + 1)):
+    # Essayer plusieurs fois avec différents ordres
+    for attempt in range(min(50, max_tries // 100 + 1)):
+        # Ordre des donneurs : plus contraints en premier
+        giver_constraints = []
+        for i in range(n):
+            constraint_count = sum(compat_matrix[i])
+            giver_constraints.append((i, constraint_count))
+        
+        giver_constraints.sort(key=lambda x: (x[1], random.random()))  # Plus contraints d'abord, avec randomisation
+        givers_order = [x[0] for x in giver_constraints]
+        
         if attempt > 0:
-            # Mélanger légèrement l'ordre après le premier essai
+            # Mélanger un peu après le premier essai
             random.shuffle(givers_order)
         
-        # Réorganiser la matrice selon l'ordre des donneurs
-        reordered_matrix = [[compat_matrix[givers_order[i]][j] for j in range(n)] for i in range(n)]
+        # Créer la matrice réorganisée selon l'ordre des donneurs
+        reordered_matrix = []
+        for i in range(n):
+            original_giver = givers_order[i]
+            reordered_matrix.append(compat_matrix[original_giver][:])
         
         assignment = [-1] * n
         used_receivers = set()
         
-        if backtrack(assignment, used_receivers, 0):
+        if backtrack(assignment, used_receivers, 0, reordered_matrix):
             # Reconvertir l'assignation vers les noms originaux
             result = {}
             for i in range(n):
                 giver_original_idx = givers_order[i]
                 receiver_idx = assignment[i]
                 result[names[giver_original_idx]] = names[receiver_idx]
-            return result
+            
+            # Vérification finale de la validité
+            valid_result = True
+            for giver_name, receiver_name in result.items():
+                giver_idx = names.index(giver_name)
+                receiver_idx = names.index(receiver_name)
+                if compat_matrix[giver_idx][receiver_idx] != 1:
+                    valid_result = False
+                    break
+            
+            if valid_result:
+                return result
     
     # Fallback vers l'ancien algorithme si le nouveau échoue
     return find_assignment_fallback(names, compat_matrix, max_tries)
@@ -305,10 +308,21 @@ def admin_start():
             return render_template("admin_start.html", names_raw=raw)
         # sauvegarde noms et réinitialise compat & participants
         print(f"DEBUG: Saving names: {names}")  # Debug line
+        
+        # Vérifier si les noms ont changé par rapport à la configuration existante
+        existing_names = db_get_config("names") or []
+        names_changed = existing_names != names
+        
         db_set_config("names", names)
         print("DEBUG: Names saved successfully")  # Debug line
-        # reset de compat et participants
-        db_set_config("compat", [])
+        
+        # Ne reset la matrice que si les noms ont changé
+        if names_changed:
+            db_set_config("compat", [])
+            print("DEBUG: Names changed, resetting compatibility matrix")
+        else:
+            print("DEBUG: Names unchanged, preserving compatibility matrix")
+            
         db_clear_participants()
         flash("Liste enregistrée. Définissez la matrice de compatibilité.", "success")
         return redirect(url_for("admin_matrix"))
@@ -345,10 +359,14 @@ def admin_matrix():
         return redirect(url_for("admin_generate"))
 
     compat = db_get_config("compat")
-    if not compat:
+    if not compat or len(compat) != n or (len(compat) > 0 and len(compat[0]) != n):
+        # Créer une nouvelle matrice si elle n'existe pas ou a une taille incorrecte
         compat = [[1]*n for _ in range(n)]
         for i in range(n):
             compat[i][i] = 0
+        print("DEBUG: Created new compatibility matrix")
+    else:
+        print("DEBUG: Using existing compatibility matrix")
 
     return render_template("admin_matrix.html", names=names, compat=compat)
 
